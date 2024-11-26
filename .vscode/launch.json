@@ -1,0 +1,49 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Current File",
+            "request": "launch",
+            "mainClass": "${file}"
+        },
+        {
+            "type": "java",
+            "name": "NotificationserviceApplication",
+            "request": "launch",
+            "mainClass": "com.namdam1123.j2ee.notificationservice.NotificationserviceApplication",
+            "projectName": "notificationservice"
+        },
+        {
+            "type": "java",
+            "name": "PostservicecommandApplication",
+            "request": "launch",
+            "mainClass": "com.namdam1123.j2ee.postservicecommand.PostservicecommandApplication",
+            "projectName": "postservicecommand"
+        },
+        {
+            "type": "java",
+            "name": "PostservicequerryApplication",
+            "request": "launch",
+            "mainClass": "com.namdam1123.j2ee.postservicequerry.PostservicequerryApplication",
+            "projectName": "postservicequerry"
+        },
+        {
+            "type": "java",
+            "name": "UserserviceApplication",
+            "request": "launch",
+            "mainClass": "com.namdam1123.j2ee.userservice.UserserviceApplication",
+            "projectName": "userservice"
+        },
+        {
+            "type": "java",
+            "name": "Attach to Docker (Postservicecommand)",
+            "request": "attach",
+            "hostName": "localhost",
+            "port": 5005
+        }      
+    ]
+}

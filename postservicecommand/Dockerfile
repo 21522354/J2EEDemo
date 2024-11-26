@@ -9,6 +9,8 @@ COPY ${JAR_FILE} app.jar
 
 # Bước 4: Cấu hình port mà ứng dụng sẽ chạy
 EXPOSE 8080
+# Thêm cổng debug
+EXPOSE 5005 
 
-# Bước 5: Cấu hình để chạy ứng dụng Spring Boot
-ENTRYPOINT ["java","-jar","/app.jar"]
+# Bước 5: Cấu hình để chạy ứng dụng Spring Boot ở chế độ debug
+ENTRYPOINT ["java", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005", "-jar", "/app.jar"]
