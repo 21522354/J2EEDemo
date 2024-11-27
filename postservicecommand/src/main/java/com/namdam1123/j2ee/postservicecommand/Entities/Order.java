@@ -1,9 +1,9 @@
 package com.namdam1123.j2ee.postservicecommand.Entities;
 
-import com.namdam1123.j2ee.postservicecommand.Dto.OrderStatus;
-
 import java.time.LocalDateTime;
 import java.util.List;
+
+import com.namdam1123.j2ee.postservicecommand.Dto.OrderStatus;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
@@ -26,4 +26,40 @@ public class Order {
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "order_id")
     private List<OrderItem> items;
+
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public void setStatus(OrderStatus status) {
+        this.status = status;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public void setItems(List<OrderItem> items) {
+        this.items = items;
+    }
+
+    public String getOrderId() {
+        return orderId;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public OrderStatus getStatus() {
+        return status;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
 }

@@ -8,4 +8,12 @@ import lombok.Data;
 public class CreateOrderCommandDTO {
     private String userId;
     private List<OrderItemDTO> items;
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public List<OrderItemDTO> getItems() {
+        return items;
+    }
 }
