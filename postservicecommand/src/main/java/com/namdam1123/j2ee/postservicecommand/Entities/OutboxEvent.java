@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 
 @Entity
@@ -15,6 +16,8 @@ public class OutboxEvent {
     private String aggregateId;
     private String aggregateType;
     private String eventType;
+
+    @Lob
     private String payload;
     private LocalDateTime createdAt;
 

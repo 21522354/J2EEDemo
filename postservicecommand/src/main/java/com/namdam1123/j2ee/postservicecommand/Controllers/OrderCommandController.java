@@ -1,5 +1,6 @@
 package com.namdam1123.j2ee.postservicecommand.Controllers;
 
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -12,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.retry.support.RetryTemplate;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,8 +29,6 @@ import com.namdam1123.j2ee.postservicecommand.Entities.OutboxEvent;
 import com.namdam1123.j2ee.postservicecommand.Events.OrderCreatedEvent;
 import com.namdam1123.j2ee.postservicecommand.Repository.OrderRepository;
 import com.namdam1123.j2ee.postservicecommand.Repository.OutboxRepository;
-
-import jakarta.transaction.Transactional;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -74,7 +74,9 @@ public class OrderCommandController {
             order.setCreatedAt(LocalDateTime.now());
             order.setItems(items);
 
+            logger.info("Saving order to database: " + order);
             orderRepository.save(order);
+            logger.info("Order saved to database: " + order);
 
             OrderCreatedEvent event = new OrderCreatedEvent(
                     order.getOrderId(),
