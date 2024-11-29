@@ -46,6 +46,12 @@ public class OutboxWorker {
                         outboxRepository.delete(event);
                     } else {
                         logger.error("Unable to send event=[" + event + "] due to : " + ex.getMessage());
+                        // Handle DLQ logic here if needed
+                        if (context.getRetryCount() >= 3) {
+                            // Update master state or trigger rollback
+                            logger.error("All retries failed for event=[" + event + "]. Triggering rollback.");
+                            // Implement rollback logic here
+                        }
                     }
                 });
                 return null;

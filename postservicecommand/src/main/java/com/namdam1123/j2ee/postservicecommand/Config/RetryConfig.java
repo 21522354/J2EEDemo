@@ -1,4 +1,4 @@
-package com.namdam1123.j2ee.postservicecommand;
+package com.namdam1123.j2ee.postservicecommand.Config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
