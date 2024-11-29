@@ -13,7 +13,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.namdam1123.j2ee.postservicecommand.Dto.OrderStatus;
+import com.namdam1123.j2ee.postservicecommand.Entities.Order;
 import com.namdam1123.j2ee.postservicecommand.Entities.OutboxEvent;
+import com.namdam1123.j2ee.postservicecommand.Events.OrderCreatedEvent;
+import com.namdam1123.j2ee.postservicecommand.Repository.OrderRepository;
 import com.namdam1123.j2ee.postservicecommand.Repository.OutboxRepository;
 
 @Component
@@ -23,6 +27,9 @@ public class OutboxWorker {
 
     @Autowired
     private OutboxRepository outboxRepository;
+
+    @Autowired
+    private OrderRepository orderRepository;
 
     @Autowired
     private KafkaTemplate<String, Object> kafkaTemplate;
@@ -50,12 +57,31 @@ public class OutboxWorker {
                         if (context.getRetryCount() >= 3) {
                             // Update master state or trigger rollback
                             logger.error("All retries failed for event=[" + event + "]. Triggering rollback.");
-                            // Implement rollback logic here
+                            rollback(event);
                         }
                     }
                 });
                 return null;
             });
+        }
+    }
+
+    private void rollback(OutboxEvent event) {
+        // Implement rollback logic here
+        // For example, you can update the status of the order to "FAILED"
+        try {
+            // Deserialize the payload to get the order ID
+            OrderCreatedEvent orderCreatedEvent = objectMapper.readValue(event.getPayload(), OrderCreatedEvent.class);
+            String orderId = orderCreatedEvent.getOrderId();
+
+            // Update the order status to "FAILED"
+            Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+            order.setStatus(OrderStatus.FAILED);
+            orderRepository.save(order);
+
+            logger.info("Rolled back order with ID=[" + orderId + "]");
+        } catch (Exception e) {
+            logger.error("Error during rollback: ", e);
         }
     }
 }
