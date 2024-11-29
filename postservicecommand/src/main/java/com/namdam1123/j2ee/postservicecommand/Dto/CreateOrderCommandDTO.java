@@ -16,4 +16,12 @@ public class CreateOrderCommandDTO {
     public List<OrderItemDTO> getItems() {
         return items;
     }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public void setItems(List<OrderItemDTO> items) {
+        this.items = items;
+    }
 }
