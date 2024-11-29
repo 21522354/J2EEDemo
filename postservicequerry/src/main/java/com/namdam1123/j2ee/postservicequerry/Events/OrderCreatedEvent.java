@@ -32,6 +32,9 @@ public class OrderCreatedEvent {
         this.createdAt = createdAt;
     }
 
+    public OrderCreatedEvent() {
+    }
+
     public String getOrderId() {
         return orderId;
     }

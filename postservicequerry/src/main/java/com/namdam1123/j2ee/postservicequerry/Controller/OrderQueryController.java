@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.namdam1123.j2ee.postservicequerry.Entities.Order;
 import com.namdam1123.j2ee.postservicequerry.Entities.OrderItem;
 import com.namdam1123.j2ee.postservicequerry.Events.OrderCreatedEvent;
@@ -26,6 +27,9 @@ public class OrderQueryController {
 
     @Autowired
     private OrderRepository orderRepository;
+    
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @GetMapping
     public List<Order> getAllOrders() {
@@ -39,25 +43,37 @@ public class OrderQueryController {
     }
 
     @KafkaListener(topics = "Order-event-topic", groupId = "order-event-group")
-    public void processOrderCreatedEvent(OrderCreatedEvent event) {
-        log.info("Received OrderCreatedEvent: {}", event);
-        Order order = new Order();
-        order.setOrderId(event.getOrderId());
-        order.setUserId(event.getUserId());
-        order.setStatus(event.getStatus());
-        order.setCreatedAt(event.getCreatedAt());
-
-        List<OrderItem> items = event.getItems().stream().map(itemDTO -> {
-            OrderItem item = new OrderItem();
-            item.setId(UUID.randomUUID().toString());
-            item.setProductId(itemDTO.getProductId());
-            item.setProductName(itemDTO.getProductName());
-            item.setQuantity(itemDTO.getQuantity());
-            item.setPrice(itemDTO.getPrice());
-            return item;
-        }).collect(Collectors.toList());
-
-        order.setItems(items);
-        orderRepository.save(order);
+    public void processOrderCreatedEvent(String payload) {
+        try {
+            // Deserialize payload từ String sang đối tượng OrderCreatedEvent
+            OrderCreatedEvent event = objectMapper.readValue(payload, OrderCreatedEvent.class);
+    
+            log.info("Received OrderCreatedEvent: {}", event);
+    
+            // Tạo đối tượng Order từ OrderCreatedEvent
+            Order order = new Order();
+            order.setOrderId(event.getOrderId());
+            order.setUserId(event.getUserId());
+            order.setStatus(event.getStatus());
+            order.setCreatedAt(event.getCreatedAt());
+    
+            List<OrderItem> items = event.getItems().stream().map(itemDTO -> {
+                OrderItem item = new OrderItem();
+                item.setId(UUID.randomUUID().toString());
+                item.setProductId(itemDTO.getProductId());
+                item.setProductName(itemDTO.getProductName());
+                item.setQuantity(itemDTO.getQuantity());
+                item.setPrice(itemDTO.getPrice());
+                return item;
+            }).collect(Collectors.toList());
+    
+            order.setItems(items);
+    
+            // Lưu vào cơ sở dữ liệu
+            orderRepository.save(order);
+        } catch (Exception e) {
+            log.error("Failed to process event. Payload: {}", payload, e);
+            // Có thể thêm cơ chế xử lý lỗi, như gửi vào Dead Letter Queue (DLQ)
+        }
     }
 }
