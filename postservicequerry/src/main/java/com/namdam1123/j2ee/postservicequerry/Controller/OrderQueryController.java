@@ -13,6 +13,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
+import org.springframework.retry.annotation.Recover;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -87,5 +88,11 @@ public class OrderQueryController {
                 kafkaTemplate.send("order-rollback-topic", rollbackEvent);
             }
         }
+    }
+
+    @Recover
+    public void recover(SQLException e, String payload) {
+        log.error("Failed to process OrderCreatedEvent after retries, sending to DLQ", e);
+        kafkaTemplate.send("order-dlq-topic", payload);
     }
 }
