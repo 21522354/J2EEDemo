@@ -1,8 +1,8 @@
 package com.namdam1123.j2ee.postservicecommand.Controllers;
 
-
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,7 @@ import com.namdam1123.j2ee.postservicecommand.Entities.Order;
 import com.namdam1123.j2ee.postservicecommand.Entities.OrderItem;
 import com.namdam1123.j2ee.postservicecommand.Entities.OutboxEvent;
 import com.namdam1123.j2ee.postservicecommand.Events.OrderCreatedEvent;
+import com.namdam1123.j2ee.postservicecommand.Events.RollbackOrderEvent;
 import com.namdam1123.j2ee.postservicecommand.Repository.OrderRepository;
 import com.namdam1123.j2ee.postservicecommand.Repository.OutboxRepository;
 
@@ -41,12 +43,6 @@ public class OrderCommandController {
 
     @Autowired
     private OutboxRepository outboxRepository;
-
-    @Autowired
-    private KafkaTemplate<String, Object> kafkaTemplate;
-
-    @Autowired
-    private RetryTemplate retryTemplate;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -105,6 +101,27 @@ public class OrderCommandController {
         } catch (Exception e) {
             logger.error("Error creating order: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @KafkaListener(topics = "order-rollback-topic", groupId = "order-rollback-group")
+    public void processRollbackOrderEvent(String payload) {
+        try {
+            RollbackOrderEvent event = objectMapper.readValue(payload, RollbackOrderEvent.class);
+            logger.info("Received RollbackOrderEvent: {}", event);
+
+            // Tìm order theo orderId và cập nhật trạng thái
+            Optional<Order> optionalOrder = orderRepository.findById(event.getOrderId());
+            if (optionalOrder.isPresent()) {
+                Order order = optionalOrder.get();
+                order.setStatus(OrderStatus.FAILED);
+                orderRepository.save(order);
+                logger.info("Order with ID [{}] has been rolled back", event.getOrderId());
+            } else {
+                logger.warn("Order with ID [{}] not found for rollback", event.getOrderId());
+            }
+        } catch (Exception e) {
+            logger.error("Error processing RollbackOrderEvent: ", e);
         }
     }
 }

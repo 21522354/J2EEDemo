@@ -1,5 +1,6 @@
 package com.namdam1123.j2ee.postservicequerry.Controller;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -9,6 +10,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.namdam1123.j2ee.postservicequerry.Entities.Order;
 import com.namdam1123.j2ee.postservicequerry.Entities.OrderItem;
 import com.namdam1123.j2ee.postservicequerry.Events.OrderCreatedEvent;
+import com.namdam1123.j2ee.postservicequerry.Events.RollbackOrderEvent;
 import com.namdam1123.j2ee.postservicequerry.Repository.OrderRepository;
 
 @RestController
@@ -27,9 +32,12 @@ public class OrderQueryController {
 
     @Autowired
     private OrderRepository orderRepository;
-    
+
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private KafkaTemplate<String, Object> kafkaTemplate;
 
     @GetMapping
     public List<Order> getAllOrders() {
@@ -43,20 +51,20 @@ public class OrderQueryController {
     }
 
     @KafkaListener(topics = "Order-event-topic", groupId = "order-event-group")
+    @Retryable(value = { SQLException.class }, maxAttempts = 5, backoff = @Backoff(delay = 2000, multiplier = 2))
     public void processOrderCreatedEvent(String payload) {
+        OrderCreatedEvent event = null; // Khai báo biến event bên ngoài khối try
         try {
-            // Deserialize payload từ String sang đối tượng OrderCreatedEvent
-            OrderCreatedEvent event = objectMapper.readValue(payload, OrderCreatedEvent.class);
-    
+            event = objectMapper.readValue(payload, OrderCreatedEvent.class);
             log.info("Received OrderCreatedEvent: {}", event);
-    
-            // Tạo đối tượng Order từ OrderCreatedEvent
+
+            // Save the order to the database
             Order order = new Order();
             order.setOrderId(event.getOrderId());
             order.setUserId(event.getUserId());
             order.setStatus(event.getStatus());
             order.setCreatedAt(event.getCreatedAt());
-    
+
             List<OrderItem> items = event.getItems().stream().map(itemDTO -> {
                 OrderItem item = new OrderItem();
                 item.setId(UUID.randomUUID().toString());
@@ -66,14 +74,18 @@ public class OrderQueryController {
                 item.setPrice(itemDTO.getPrice());
                 return item;
             }).collect(Collectors.toList());
-    
+
             order.setItems(items);
-    
+
             // Lưu vào cơ sở dữ liệu
             orderRepository.save(order);
         } catch (Exception e) {
-            log.error("Failed to process event. Payload: {}", payload, e);
-            // Có thể thêm cơ chế xử lý lỗi, như gửi vào Dead Letter Queue (DLQ)
+            log.error("Error processing OrderCreatedEvent: ", e);
+            // If saving the order fails, send a rollback event
+            if (event != null) {
+                RollbackOrderEvent rollbackEvent = new RollbackOrderEvent(event.getOrderId());
+                kafkaTemplate.send("order-rollback-topic", rollbackEvent);
+            }
         }
     }
 }
