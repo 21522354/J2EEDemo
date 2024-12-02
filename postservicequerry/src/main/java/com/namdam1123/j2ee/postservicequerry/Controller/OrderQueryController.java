@@ -2,6 +2,8 @@ package com.namdam1123.j2ee.postservicequerry.Controller;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.namdam1123.j2ee.postservicequerry.Entities.Order;
+import com.namdam1123.j2ee.postservicequerry.Entities.OrderItem;
 import com.namdam1123.j2ee.postservicequerry.Events.OrderCreatedEvent;
 import com.namdam1123.j2ee.postservicequerry.Events.RollbackOrderEvent;
 import com.namdam1123.j2ee.postservicequerry.Repository.OrderRepository;
@@ -62,6 +65,18 @@ public class OrderQueryController {
                 order.setUserId(event.getUserId());
                 order.setStatus(event.getStatus());
                 order.setCreatedAt(event.getCreatedAt());
+
+                List<OrderItem> items = event.getItems().stream().map(itemDTO -> {
+                    OrderItem item = new OrderItem();
+                    item.setId(itemDTO.id);
+                    item.setProductId(itemDTO.getProductId());
+                    item.setProductName(itemDTO.getProductName());
+                    item.setQuantity(itemDTO.getQuantity());
+                    item.setPrice(itemDTO.getPrice());
+                    return item;
+                }).collect(Collectors.toList());
+
+                order.setItems(items);
 
                 orderRepository.save(order);
                 return; // Thành công, kết thúc vòng lặp

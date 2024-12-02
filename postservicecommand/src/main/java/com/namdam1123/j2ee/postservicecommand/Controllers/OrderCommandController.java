@@ -56,6 +56,7 @@ public class OrderCommandController {
             List<OrderItem> items = request.getItems().stream().map(itemDTO -> {
                 OrderItem item = new OrderItem();
                 item.setId(UUID.randomUUID().toString());
+                itemDTO.id = item.getId();
                 item.setProductId(itemDTO.getProductId());
                 item.setProductName(itemDTO.getProductName());
                 item.setQuantity(itemDTO.getQuantity());

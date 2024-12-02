@@ -1,6 +1,7 @@
 package com.namdam1123.j2ee.postservicequerry.Dto;
 
 public class OrderItemDTO {
+    public String id;
     private String productId;
     private String productName;
     private int quantity;
