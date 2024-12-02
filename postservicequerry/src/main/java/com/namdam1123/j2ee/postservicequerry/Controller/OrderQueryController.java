@@ -84,8 +84,13 @@ public class OrderQueryController {
             log.error("Error processing OrderCreatedEvent: ", e);
             // If saving the order fails, send a rollback event
             if (event != null) {
-                RollbackOrderEvent rollbackEvent = new RollbackOrderEvent(event.getOrderId());
-                kafkaTemplate.send("order-rollback-topic", rollbackEvent);
+                try {
+                    RollbackOrderEvent rollbackEvent = new RollbackOrderEvent(event.getOrderId());
+                    String rollbackEventPayload = objectMapper.writeValueAsString(rollbackEvent);
+                    kafkaTemplate.send("order-rollback-topic", rollbackEventPayload);
+                } catch (Exception ex) {
+                    log.error("Error serializing RollbackOrderEvent: ", ex);
+                }
             }
         }
     }
