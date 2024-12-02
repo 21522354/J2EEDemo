@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.namdam1123.j2ee.postservicequerry.Entities.Order;
 import com.namdam1123.j2ee.postservicequerry.Entities.OrderItem;
@@ -52,8 +54,8 @@ public class OrderQueryController {
     }
 
     @KafkaListener(topics = "Order-event-topic", groupId = "order-event-group")
-    @Retryable(value = { SQLException.class }, maxAttempts = 5, backoff = @Backoff(delay = 2000, multiplier = 2))
-    public void processOrderCreatedEvent(String payload) {
+    @Retryable(value = { Exception.class }, maxAttempts = 2, backoff = @Backoff(delay = 2000, multiplier = 2))
+    public void processOrderCreatedEvent(String payload) throws JsonProcessingException, JsonMappingException {
         OrderCreatedEvent event = null; // Khai báo biến event bên ngoài khối try
         try {
             event = objectMapper.readValue(payload, OrderCreatedEvent.class);
@@ -82,22 +84,22 @@ public class OrderQueryController {
             orderRepository.save(order);
         } catch (Exception e) {
             log.error("Error processing OrderCreatedEvent: ", e);
-            // If saving the order fails, send a rollback event
-            if (event != null) {
-                try {
-                    RollbackOrderEvent rollbackEvent = new RollbackOrderEvent(event.getOrderId());
-                    String rollbackEventPayload = objectMapper.writeValueAsString(rollbackEvent);
-                    kafkaTemplate.send("order-rollback-topic", rollbackEventPayload);
-                } catch (Exception ex) {
-                    log.error("Error serializing RollbackOrderEvent: ", ex);
-                }
-            }
+            throw e;
         }
     }
 
     @Recover
-    public void recover(SQLException e, String payload) {
-        log.error("Failed to process OrderCreatedEvent after retries, sending to DLQ", e);
-        kafkaTemplate.send("order-dlq-topic", payload);
+    public void recover(Exception e, String payload) {
+        try {
+            log.error("Failed to process OrderCreatedEvent after retries, sending to DLQ", e);
+            kafkaTemplate.send("order-dlq-topic", payload);
+
+            OrderCreatedEvent event = objectMapper.readValue(payload, OrderCreatedEvent.class);
+            RollbackOrderEvent rollbackEvent = new RollbackOrderEvent(event.getOrderId());
+            String rollbackEventPayload = objectMapper.writeValueAsString(rollbackEvent);
+            kafkaTemplate.send("order-rollback-topic", rollbackEventPayload);
+        } catch (Exception ex) {
+            log.error("Error when recover: ", ex);
+        }
     }
 }
