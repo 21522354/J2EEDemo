@@ -1,29 +1,20 @@
 package com.namdam1123.j2ee.postservicequerry.Controller;
 
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
-import org.springframework.retry.annotation.Recover;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.namdam1123.j2ee.postservicequerry.Entities.Order;
-import com.namdam1123.j2ee.postservicequerry.Entities.OrderItem;
 import com.namdam1123.j2ee.postservicequerry.Events.OrderCreatedEvent;
 import com.namdam1123.j2ee.postservicequerry.Events.RollbackOrderEvent;
 import com.namdam1123.j2ee.postservicequerry.Repository.OrderRepository;
@@ -54,52 +45,58 @@ public class OrderQueryController {
     }
 
     @KafkaListener(topics = "Order-event-topic", groupId = "order-event-group")
-    @Retryable(value = { Exception.class }, maxAttempts = 2, backoff = @Backoff(delay = 2000, multiplier = 2))
-    public void processOrderCreatedEvent(String payload) throws JsonProcessingException, JsonMappingException {
-        OrderCreatedEvent event = null; // Khai báo biến event bên ngoài khối try
-        try {
-            event = objectMapper.readValue(payload, OrderCreatedEvent.class);
-            log.info("Received OrderCreatedEvent: {}", event);
+    public void processOrderCreatedEvent(String payload) {
+        int attempts = 0;
+        int maxAttempts = 1; // Số lần retry tối đa
+        long delay = 1000; // Thời gian delay giữa các lần retry
 
-            // Save the order to the database
-            Order order = new Order();
-            order.setOrderId(event.getOrderId());
-            order.setUserId(event.getUserId());
-            order.setStatus(event.getStatus());
-            order.setCreatedAt(event.getCreatedAt());
+        while (attempts < maxAttempts) {
+            try {
+                attempts++;
+                OrderCreatedEvent event = objectMapper.readValue(payload, OrderCreatedEvent.class);
+                log.info("Received OrderCreatedEvent: {}", event);
 
-            List<OrderItem> items = event.getItems().stream().map(itemDTO -> {
-                OrderItem item = new OrderItem();
-                item.setId(UUID.randomUUID().toString());
-                item.setProductId(itemDTO.getProductId());
-                item.setProductName(itemDTO.getProductName());
-                item.setQuantity(itemDTO.getQuantity());
-                item.setPrice(itemDTO.getPrice());
-                return item;
-            }).collect(Collectors.toList());
+                // Save the order to the database
+                Order order = new Order();
+                order.setOrderId(event.getOrderId());
+                order.setUserId(event.getUserId());
+                order.setStatus(event.getStatus());
+                order.setCreatedAt(event.getCreatedAt());
 
-            order.setItems(items);
-
-            // Lưu vào cơ sở dữ liệu
-            orderRepository.save(order);
-        } catch (Exception e) {
-            log.error("Error processing OrderCreatedEvent: ", e);
-            throw e;
+                orderRepository.save(order);
+                return; // Thành công, kết thúc vòng lặp
+            } catch (Exception e) {
+                log.error("Attempt {} failed: {}", attempts, e.getMessage(), e);
+                if (attempts >= maxAttempts) {
+                    handleFailure(payload, e); // Xử lý khi vượt quá số lần retry
+                    return;
+                }
+                try {
+                    Thread.sleep(delay); // Delay giữa các lần retry
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    log.error("Retry interrupted", ie);
+                    return;
+                }
+            }
         }
     }
 
-    @Recover
-    public void recover(Exception e, String payload) {
+    private void handleFailure(String payload, Exception e) {
+        log.error("All retry attempts failed, handling failure for payload: {}", payload);
+
         try {
-            log.error("Failed to process OrderCreatedEvent after retries, sending to DLQ", e);
+            // Gửi vào Dead Letter Queue (DLQ)
             kafkaTemplate.send("order-dlq-topic", payload);
 
+            // Gửi rollback event
             OrderCreatedEvent event = objectMapper.readValue(payload, OrderCreatedEvent.class);
             RollbackOrderEvent rollbackEvent = new RollbackOrderEvent(event.getOrderId());
             String rollbackEventPayload = objectMapper.writeValueAsString(rollbackEvent);
             kafkaTemplate.send("order-rollback-topic", rollbackEventPayload);
+
         } catch (Exception ex) {
-            log.error("Error when recover: ", ex);
+            log.error("Error when handling failure: ", ex);
         }
     }
 }
