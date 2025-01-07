@@ -85,7 +85,9 @@ public class PostServiceCommandController {
             // Find post by postId and delete it
             Optional<Post> optionalPost = repository.findById(event.getPostId());
             if (optionalPost.isPresent()) {
-                repository.delete(optionalPost.get());
+                Post post = optionalPost.get();
+                post.setStatus(PostStatus.FAILED);
+                repository.save(post);
                 logger.info("Post with ID [{}] has been rolled back", event.getPostId());
             } else {
                 logger.warn("Post with ID [{}] not found for rollback", event.getPostId());
