@@ -1,4 +1,4 @@
-package com.namdam1123.j2ee.postservicecommand.Dto;
+package com.namdam1123.j2ee.postservicecommand.Dto.PostDTOs;
 
 import com.namdam1123.j2ee.postservicecommand.Entities.Post;
 import lombok.Data;
@@ -8,7 +8,8 @@ public class PostEvent {
     private String EventType;
     private Post post;
 
-    public PostEvent(){}
+    public PostEvent() {
+    }
 
     public PostEvent(String eventType, Post post) {
         EventType = eventType;
