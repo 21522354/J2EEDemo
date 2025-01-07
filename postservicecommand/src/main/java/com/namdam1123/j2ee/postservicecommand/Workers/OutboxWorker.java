@@ -1,6 +1,7 @@
 package com.namdam1123.j2ee.postservicecommand.Workers;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 import org.slf4j.Logger;
@@ -13,11 +14,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.namdam1123.j2ee.postservicecommand.Dto.OrderStatus;
-import com.namdam1123.j2ee.postservicecommand.Entities.Order;
+import com.namdam1123.j2ee.postservicecommand.Dto.PostStatus;
+import com.namdam1123.j2ee.postservicecommand.Entities.Post;
 import com.namdam1123.j2ee.postservicecommand.Entities.OutboxEvent;
-import com.namdam1123.j2ee.postservicecommand.Events.OrderCreatedEvent;
-import com.namdam1123.j2ee.postservicecommand.Repository.OrderRepository;
+import com.namdam1123.j2ee.postservicecommand.Events.PostCreatedEvent;
+import com.namdam1123.j2ee.postservicecommand.Repository.PostRepository;
 import com.namdam1123.j2ee.postservicecommand.Repository.OutboxRepository;
 
 @Component
@@ -29,7 +30,7 @@ public class OutboxWorker {
     private OutboxRepository outboxRepository;
 
     @Autowired
-    private OrderRepository orderRepository;
+    private PostRepository postRepository;
 
     @Autowired
     private KafkaTemplate<String, Object> kafkaTemplate;
@@ -46,10 +47,12 @@ public class OutboxWorker {
 
         for (OutboxEvent event : events) {
             retryTemplate.execute(context -> {
-                CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send("Order-event-topic", event.getPayload());
+                CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send("Post-event-topic",
+                        event.getPayload());
                 future.whenComplete((result, ex) -> {
                     if (ex == null) {
-                        logger.info("Sent event=[" + event + "] with offset=[" + result.getRecordMetadata().offset() + "]");
+                        logger.info(
+                                "Sent event=[" + event + "] with offset=[" + result.getRecordMetadata().offset() + "]");
                         outboxRepository.delete(event);
                     } else {
                         logger.error("Unable to send event=[" + event + "] due to : " + ex.getMessage());
@@ -67,19 +70,17 @@ public class OutboxWorker {
     }
 
     private void rollback(OutboxEvent event) {
-        // Implement rollback logic here
-        // For example, you can update the status of the order to "FAILED"
         try {
-            // Deserialize the payload to get the order ID
-            OrderCreatedEvent orderCreatedEvent = objectMapper.readValue(event.getPayload(), OrderCreatedEvent.class);
-            String orderId = orderCreatedEvent.getOrderId();
+            // Deserialize the payload to get the post ID
+            PostCreatedEvent postCreatedEvent = objectMapper.readValue(event.getPayload(), PostCreatedEvent.class);
+            UUID postId = postCreatedEvent.getPostId();
 
-            // Update the order status to "FAILED"
-            Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
-            order.setStatus(OrderStatus.FAILED);
-            orderRepository.save(order);
+            // Update the post status to "FAILED"
+            Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post not found"));
+            post.setStatus(PostStatus.FAILED);
+            postRepository.save(post);
 
-            logger.info("Rolled back order with ID=[" + orderId + "]");
+            logger.info("Rolled back post with ID=[" + postId + "]");
         } catch (Exception e) {
             logger.error("Error during rollback: ", e);
         }

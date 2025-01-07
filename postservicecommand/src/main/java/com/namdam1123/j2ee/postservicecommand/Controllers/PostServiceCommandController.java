@@ -2,11 +2,13 @@ package com.namdam1123.j2ee.postservicecommand.Controllers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.namdam1123.j2ee.postservicecommand.Dto.PostStatus;
 import com.namdam1123.j2ee.postservicecommand.Dto.PostDTOs.CreatePostCommandDTO;
 import com.namdam1123.j2ee.postservicecommand.Dto.PostDTOs.PostEvent;
 import com.namdam1123.j2ee.postservicecommand.Entities.OutboxEvent;
 import com.namdam1123.j2ee.postservicecommand.Entities.Post;
 import com.namdam1123.j2ee.postservicecommand.Events.PostCreatedEvent;
+import com.namdam1123.j2ee.postservicecommand.Events.PostEvents.RollbackPostEvent;
 import com.namdam1123.j2ee.postservicecommand.Repository.OutboxRepository;
 import com.namdam1123.j2ee.postservicecommand.Repository.PostRepository;
 
@@ -15,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -44,6 +47,7 @@ public class PostServiceCommandController {
         try {
             Post post = new Post();
             post.setPostId(UUID.randomUUID());
+            post.setStatus(PostStatus.PENDING);
             post.setUserId(postDTO.getUserId());
             post.setTitle(postDTO.getTitle());
             post.setNumberOfLike(0);
@@ -72,6 +76,25 @@ public class PostServiceCommandController {
         } catch (JsonProcessingException e) {
             logger.error("Error serializing event: ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @KafkaListener(topics = "post-rollback-topic", groupId = "post-rollback-group")
+    public void processRollbackPostEvent(String payload) {
+        try {
+            RollbackPostEvent event = objectMapper.readValue(payload, RollbackPostEvent.class);
+            logger.info("Received RollbackPostEvent: {}", event);
+
+            // Find post by postId and delete it
+            Optional<Post> optionalPost = repository.findById(event.getPostId());
+            if (optionalPost.isPresent()) {
+                repository.delete(optionalPost.get());
+                logger.info("Post with ID [{}] has been rolled back", event.getPostId());
+            } else {
+                logger.warn("Post with ID [{}] not found for rollback", event.getPostId());
+            }
+        } catch (Exception e) {
+            logger.error("Error processing RollbackPostEvent: ", e);
         }
     }
 
