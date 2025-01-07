@@ -40,7 +40,7 @@ public class PostServiceQuerryController {
     @KafkaListener(topics = "Post-event-topic", groupId = "post-event-group")
     public void processPostCreatedEvent(String payload) {
         int attempts = 0;
-        int maxAttempts = 5; // Số lần retry tối đa
+        int maxAttempts = 1; // Số lần retry tối đa
         long delay = 2000; // Thời gian delay giữa các lần retry
 
         while (attempts < maxAttempts) {

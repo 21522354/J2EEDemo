@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.namdam1123.j2ee.postservicecommand.Entities.Post;
 
 public class PostCreatedEvent {
@@ -21,7 +23,20 @@ public class PostCreatedEvent {
         this.createdDate = post.getCreatedDate();
     }
 
-    // Getters and Setters
+    @JsonCreator
+    public PostCreatedEvent(
+            @JsonProperty("postId") UUID postId,
+            @JsonProperty("userId") UUID userId,
+            @JsonProperty("title") String title,
+            @JsonProperty("numberOfLike") int numberOfLike,
+            @JsonProperty("createdDate") LocalDateTime createdDate) {
+        this.postId = postId;
+        this.userId = userId;
+        this.title = title;
+        this.numberOfLike = numberOfLike;
+        this.createdDate = createdDate;
+    }
+
     public UUID getPostId() {
         return postId;
     }
