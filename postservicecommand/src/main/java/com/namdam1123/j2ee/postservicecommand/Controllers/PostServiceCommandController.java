@@ -2,11 +2,10 @@ package com.namdam1123.j2ee.postservicecommand.Controllers;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.namdam1123.j2ee.postservicecommand.Dto.PostStatus;
 import com.namdam1123.j2ee.postservicecommand.Dto.PostDTOs.CreatePostCommandDTO;
-import com.namdam1123.j2ee.postservicecommand.Dto.PostDTOs.PostEvent;
 import com.namdam1123.j2ee.postservicecommand.Entities.OutboxEvent;
 import com.namdam1123.j2ee.postservicecommand.Entities.Post;
+import com.namdam1123.j2ee.postservicecommand.Entities.PostStatus;
 import com.namdam1123.j2ee.postservicecommand.Events.PostCreatedEvent;
 import com.namdam1123.j2ee.postservicecommand.Events.PostEvents.RollbackPostEvent;
 import com.namdam1123.j2ee.postservicecommand.Repository.OutboxRepository;
@@ -18,12 +17,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 

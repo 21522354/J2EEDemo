@@ -14,8 +14,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.namdam1123.j2ee.postservicecommand.Dto.PostStatus;
 import com.namdam1123.j2ee.postservicecommand.Entities.Post;
+import com.namdam1123.j2ee.postservicecommand.Entities.PostStatus;
 import com.namdam1123.j2ee.postservicecommand.Entities.OutboxEvent;
 import com.namdam1123.j2ee.postservicecommand.Events.PostCreatedEvent;
 import com.namdam1123.j2ee.postservicecommand.Repository.PostRepository;

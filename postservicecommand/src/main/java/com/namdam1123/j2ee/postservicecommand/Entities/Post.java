@@ -8,8 +8,6 @@ import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.UUID;
 
-import com.namdam1123.j2ee.postservicecommand.Dto.PostStatus;
-
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
