@@ -40,6 +40,7 @@ public class PostServiceCommandController {
 
     @PostMapping("/createPost")
     @Transactional
+    public
     ResponseEntity<Post> createPost(@RequestBody CreatePostCommandDTO postDTO) {
         try {
             Post post = new Post();
