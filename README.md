@@ -2,14 +2,18 @@
 
 ## 1. Clone dự án
 Trước tiên, clone dự án từ GitHub:
+```shell
 git clone https://github.com/21522354/J2EEDemo
+```
 
 ## 2. Tải và mở Docker Desktop
 Tải Docker Desktop và mở ứng dụng.
 
 ## 3. Tạo Docker Image
 Vào folder `postservicecommand` và chạy lệnh sau để tạo image:
+```shell
 docker build -t postservicecommand .
+```
 Sau đó image `postservicecommand` sẽ được tạo. Làm tương tự với `postservicequerry`.
 
 ## 4. Chỉnh sửa Docker Compose
@@ -17,8 +21,9 @@ Vào folder `YamlFile`, mở file `docker-compose.yml` bằng VSCode. Chỉnh l�
 
 ## 5. Chạy Docker Compose
 Mở thư mục `YamlFile` bằng terminal và chạy lệnh:
+```shell
 docker compose up -d
-
+```
 Hệ thống sẽ chạy bằng Docker, bao gồm các container cho Kafka, Redis, MySQL, Nginx và các service command và querry.
 
 ## 6. Gửi request bằng Postman
