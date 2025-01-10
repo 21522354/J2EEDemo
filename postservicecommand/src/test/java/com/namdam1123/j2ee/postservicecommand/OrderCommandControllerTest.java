@@ -25,7 +25,6 @@ import com.namdam1123.j2ee.postservicecommand.Entities.Order;
 import com.namdam1123.j2ee.postservicecommand.Repository.OrderRepository;
 
 public class OrderCommandControllerTest {
-
     @Mock
     private OrderRepository orderRepository;
 

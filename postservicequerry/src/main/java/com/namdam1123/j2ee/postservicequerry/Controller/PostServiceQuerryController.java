@@ -1,7 +1,6 @@
 package com.namdam1123.j2ee.postservicequerry.Controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.namdam1123.j2ee.postservicequerry.Dto.PostEvent;
 import com.namdam1123.j2ee.postservicequerry.Entities.Post;
 import com.namdam1123.j2ee.postservicequerry.Entities.PostStatus;
 import com.namdam1123.j2ee.postservicequerry.Events.PostCreatedEvent;
@@ -10,13 +9,17 @@ import com.namdam1123.j2ee.postservicequerry.Repository.PostRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping(path = "/api/posts")
@@ -32,10 +35,74 @@ public class PostServiceQuerryController {
     @Autowired
     private KafkaTemplate<String, Object> kafkaTemplate;
 
+    @Autowired
+    private RedisTemplate template;
+
+
     @GetMapping
-    List<Post> getAllPost() {
-        return repository.findAll();
+    public List<Post> getAllPost() {
+        try {
+            // Kiểm tra dữ liệu trong Redis cache
+            String cachedPostsJson = (String) template.opsForValue().get("postss");
+            if (cachedPostsJson != null) {
+                // Nếu có dữ liệu trong cache, chuyển đổi từ JSON sang danh sách Post và trả về
+                List<Post> cachedPosts = objectMapper.readValue(cachedPostsJson,
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, Post.class));
+                log.info("Returning posts from cache");
+                return cachedPosts;
+            }
+
+            // Nếu không có dữ liệu trong cache, lấy từ database
+            List<Post> posts = repository.findAll();
+            if (!posts.isEmpty()) {
+                // Chuyển danh sách bài viết thành JSON và lưu vào Redis cache với TTL là 10 giây
+                String postsJson = objectMapper.writeValueAsString(posts);
+                template.opsForValue().set("postss", postsJson, 10, TimeUnit.SECONDS);
+                log.info("Caching posts into Redis with TTL of 10 seconds");
+            }
+
+            // Trả về danh sách bài viết từ database
+            return posts;
+        } catch (Exception e) {
+            log.error("Error while handling cache or database: ", e);
+            // Trong trường hợp lỗi, trả về danh sách rỗng
+            return List.of();
+        }
     }
+    @GetMapping("/user/{UserId}")
+    public List<Post> getPostsByUserId(@PathVariable UUID UserId) {
+        try {
+            // Tạo khóa cache duy nhất theo userId
+            String cacheKey = "PostData_User_" + UserId;
+
+            // Kiểm tra dữ liệu trong Redis cache
+            String cachedPostsJson = (String) template.opsForValue().get(cacheKey);
+            if (cachedPostsJson != null) {
+                // Nếu có dữ liệu trong cache, chuyển đổi từ JSON sang danh sách Post và trả về
+                List<Post> cachedPosts = objectMapper.readValue(cachedPostsJson,
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, Post.class));
+                log.info("Returning posts from cache for userId: {}", UserId);
+                return cachedPosts;
+            }
+
+            // Nếu không có dữ liệu trong cache, lấy từ database
+            List<Post> posts = repository.findByUserId(UserId);
+            if (!posts.isEmpty()) {
+                // Chuyển danh sách bài viết thành JSON và lưu vào Redis cache với TTL là 10 giây
+                String postsJson = objectMapper.writeValueAsString(posts);
+                template.opsForValue().set(cacheKey, postsJson, 10, TimeUnit.SECONDS);
+                log.info("Caching posts into Redis for userId: {} with TTL of 10 seconds", UserId);
+            }
+
+            // Trả về danh sách bài viết từ database
+            return posts;
+        } catch (Exception e) {
+            log.error("Error while handling cache or database for userId: {}: ", UserId, e);
+            // Trong trường hợp lỗi, trả về danh sách rỗng
+            return List.of();
+        }
+    }
+
 
     @KafkaListener(topics = "Post-event-topic", groupId = "post-event-group")
     public void processPostCreatedEvent(String payload) {
