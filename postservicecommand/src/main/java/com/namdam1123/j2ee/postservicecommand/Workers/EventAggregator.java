@@ -71,25 +71,25 @@ public class EventAggregator {
             List<UUID> postIds = new ArrayList<>();
             LocalDateTime startTime = null;
             LocalDateTime endTime = null;
-            
+
             for (OutboxEvent event : events) {
                 try {
                     Post post = objectMapper.readValue(event.getPayload(), Post.class);
                     postIds.add(post.getPostId());
-                    
+
                     // Track earliest and latest create times
                     if (startTime == null || post.getCreatedDate().isBefore(startTime)) {
                         startTime = post.getCreatedDate();
                     }
                     if (endTime == null || post.getCreatedDate().isAfter(endTime)) {
-                        endTime = post.getCreatedDate(); 
+                        endTime = post.getCreatedDate();
                     }
                 } catch (Exception e) {
                     logger.error("Error getting post ID from event: ", e);
                 }
             }
-            postStatistic.setPostId(postIds);
-            postStatistic.setAverageLike((int)average);
+            postStatistic.setPostIds(postIds);
+            postStatistic.setAverageLike((int) average);
             postStatistic.setStartTime(startTime);
             postStatistic.setEndTime(endTime);
 

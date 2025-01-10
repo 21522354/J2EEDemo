@@ -38,6 +38,9 @@ public class PostStatistic {
         this.EndTime = endTime;
     }
 
+    public PostStatistic() {
+    }
+
     public UUID getPostStatisticId() {
         return PostStatisticId;
     }
