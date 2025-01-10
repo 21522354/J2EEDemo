@@ -40,15 +40,14 @@ public class PostServiceCommandController {
 
     @PostMapping("/createPost")
     @Transactional
-    public
-    ResponseEntity<Post> createPost(@RequestBody CreatePostCommandDTO postDTO) {
+    public ResponseEntity<Post> createPost(@RequestBody CreatePostCommandDTO postDTO) {
         try {
             Post post = new Post();
             post.setPostId(UUID.randomUUID());
             post.setStatus(PostStatus.PENDING);
             post.setUserId(postDTO.getUserId());
             post.setTitle(postDTO.getTitle());
-            post.setNumberOfLike(0);
+            post.setNumberOfLike(postDTO.getNumberOfLike());
             post.setCreatedDate((LocalDateTime.now()));
 
             repository.save(post);

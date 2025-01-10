@@ -5,6 +5,15 @@ import java.util.UUID;
 public class CreatePostCommandDTO {
     private String Title;
     private UUID UserId;
+    private int NumberOfLike;
+
+    public int getNumberOfLike() {
+        return NumberOfLike;
+    }
+
+    public void setNumberOfLike(int numberOfLike) {
+        NumberOfLike = numberOfLike;
+    }
 
     public CreatePostCommandDTO() {
     }
