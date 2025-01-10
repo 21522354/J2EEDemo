@@ -81,16 +81,16 @@ public class PostStatistic {
         this.EndTime = endTime;
     }
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    // @Autowired
+    // private ObjectMapper objectMapper;
 
-    public String getPayload() {
-        try {
-            return objectMapper.writeValueAsString(this);
-        } catch (JsonProcessingException e) {
-            e.printStackTrace();
-            return "";
-        }
-    }
+    // public String getPayload() {
+    // try {
+    // return objectMapper.writeValueAsString(this);
+    // } catch (JsonProcessingException e) {
+    // e.printStackTrace();
+    // return "";
+    // }
+    // }
 
 }

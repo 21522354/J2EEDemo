@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping(path = "/api/posts")
@@ -63,7 +64,7 @@ public class PostServiceQuerryController {
 
                 // Save the post to the database
                 PostStatistic postStatistic = new PostStatistic(
-                        event.getPostStatisticId(),
+                        UUID.randomUUID(),
                         event.getPostIds(),
                         event.getAverageLike(),
                         event.getStartTime(),

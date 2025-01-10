@@ -20,6 +20,7 @@ import com.namdam1123.j2ee.postservicecommand.Entities.PostStatus;
 import com.namdam1123.j2ee.postservicecommand.Entities.OutboxEvent;
 import com.namdam1123.j2ee.postservicecommand.Events.PostCreatedEvent;
 import com.namdam1123.j2ee.postservicecommand.Repository.PostRepository;
+import com.namdam1123.j2ee.postservicecommand.Services.PostStatisticSerializer;
 import com.namdam1123.j2ee.postservicecommand.Repository.OutboxRepository;
 
 @Component
@@ -74,6 +75,8 @@ public class OutboxWorker {
 
     @Autowired
     private EventAggregator eventAggregator;
+    @Autowired
+    private PostStatisticSerializer postStatisticSerializer;
 
     @Scheduled(fixedRate = 5000) // 5 s
     public void aggregateEvents() {
@@ -83,9 +86,11 @@ public class OutboxWorker {
         }
 
         PostStatistic eventsToProcess = eventAggregator.processAndSendAverageEvent();
+        String payload = postStatisticSerializer.serialize(eventsToProcess);
+
         retryTemplate.execute(context -> {
             CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send("PostStatistic-event-topic",
-                    eventsToProcess.getPayload());
+                    payload);
             future.whenComplete((result, ex) -> {
                 if (ex == null) {
                     logger.info(
