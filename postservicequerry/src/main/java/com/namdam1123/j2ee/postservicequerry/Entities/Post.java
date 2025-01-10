@@ -1,5 +1,6 @@
 package com.namdam1123.j2ee.postservicequerry.Entities;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import lombok.*;
@@ -16,7 +17,8 @@ import java.util.UUID;
 public class Post {
     @Id
     private UUID PostId;
-    private UUID UserId;
+    @Column(name = "userId")
+    private UUID userId;
     private String Title;
     private LocalDateTime CreatedDate;
     private int NumberOfLike;
@@ -39,11 +41,11 @@ public class Post {
     }
 
     public UUID getUserId() {
-        return UserId;
+        return userId;
     }
 
     public void setUserId(UUID userId) {
-        UserId = userId;
+        this.userId = userId;
     }
 
     public String getTitle() {

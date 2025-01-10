@@ -1,0 +1,133 @@
+version: '3'
+
+services:
+  # Cơ sở dữ liệu cho postservicequerry
+  mysql-docker-container:
+    image: mysql:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=123123
+      - MYSQL_DATABASE=postservicequerry
+      - MYSQL_USER=namdam1123
+      - MYSQL_PASSWORD=123123
+    volumes:
+      - /data/mysql:/var/lib/mysql
+    ports:
+      - 3307:3306
+    container_name: mysql-db
+
+  # Cơ sở dữ liệu riêng cho postservicecommand
+  mysql-postservicecommand:
+    image: mysql:latest
+    environment:
+      - MYSQL_ROOT_PASSWORD=123123
+      - MYSQL_DATABASE=postservicecommand
+      - MYSQL_USER=namdam1123
+      - MYSQL_PASSWORD=123123
+    volumes:
+      - /data/mysql-postservicecommand:/var/lib/mysql
+    ports:
+      - 3308:3306
+    container_name: mysql-postservicecommand
+
+  # Service cho postservicecommand
+  postservicecommand:
+    image: postservicecommand
+    build:
+      context: ./postservicecommand
+      dockerfile: Dockerfile
+    depends_on:
+      - mysql-postservicecommand
+    ports:
+      - 8080:8080
+      - 5005:5005 # Expose debug port
+    volumes:  
+      - "C:/Users/ndam8/Desktop/J2eeDemo/J2EEDemo/postservicecommand:/app"
+    container_name: postservicecommand
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+
+  # Các service khác
+  postservicequerry1:
+    image: postservicequery
+    build:
+      context: ./postservicequery
+      dockerfile: Dockerfile
+    depends_on:
+      - mysql-docker-container
+    ports:
+      - 8081:8082
+      - 6006:6006 # Expose debug port
+    volumes:
+      - /data/spring-boot-app:/app
+    environment:
+      - SPRING_PROFILES_ACTIVE=8081
+    container_name: postservicequerry1
+    restart: always
+
+  postservicequerry2:
+    image: postservicequery
+    build:
+      context: ./postservicequery
+      dockerfile: Dockerfile
+    depends_on:
+      - mysql-docker-container
+    ports:
+      - 8082:8082
+    volumes:
+      - /data/spring-boot-app:/app
+    environment:
+      - SPRING_PROFILES_ACTIVE=8082
+    container_name: postservicequerry2
+    restart: always
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - 8083:8080
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - postservicequerry1
+      - postservicequerry2
+    container_name: nginx-loadbalancer
+    restart: always
+
+  zookeeper:
+    image: wurstmeister/zookeeper:latest
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: wurstmeister/kafka:latest
+    ports:
+      - "9093:9092"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9092,OUTSIDE://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_LISTENERS: INSIDE://0.0.0.0:9092,OUTSIDE://0.0.0.0:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    depends_on:
+      - zookeeper
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "2020:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+
+  # Redis service
+  redis:
+    image: redis:latest
+    container_name: redis-container
+    ports:
+      - "6379:6379"
+    restart: always
+    volumes:
+      - /data/redis:/data

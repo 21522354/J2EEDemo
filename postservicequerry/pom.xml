@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -8,57 +8,97 @@
 		<version>3.3.4</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
+
 	<groupId>com.namdam1123.j2ee</groupId>
 	<artifactId>postservicequerry</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>postservicequerry</name>
-	<description>User Service for demo</description>
-	<url/>
+	<name>Post Service Query</name>
+	<description>A Spring Boot microservice for querying posts</description>
+	<url>https://github.com/namdam1123/postservicequerry</url>
+
 	<licenses>
-		<license/>
+		<license>
+			<name>Apache License, Version 2.0</name>
+			<url>https://www.apache.org/licenses/LICENSE-2.0</url>
+			<distribution>repo</distribution>
+		</license>
 	</licenses>
+
 	<developers>
-		<developer/>
+		<developer>
+			<id>namdam1123</id>
+			<name>Nam Dam</name>
+			<email>namdam1123@example.com</email>
+			<roles>
+				<role>developer</role>
+			</roles>
+		</developer>
 	</developers>
+
 	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
+		<connection>scm:git:git://github.com/namdam1123/postservicequerry.git</connection>
+		<developerConnection>scm:git:ssh://github.com/namdam1123/postservicequerry.git</developerConnection>
+		<url>https://github.com/namdam1123/postservicequerry</url>
 	</scm>
+
 	<properties>
 		<java.version>17</java.version>
 	</properties>
+
 	<dependencies>
+		<!-- Spring Data JPA -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
+
+		<!-- Spring Web -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
 
+		<!-- MySQL Driver -->
 		<dependency>
 			<groupId>com.mysql</groupId>
 			<artifactId>mysql-connector-j</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+
+		<!-- Lombok -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
 		</dependency>
+
+		<!-- Spring Boot Testing -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 
+		<!-- Spring Kafka -->
 		<dependency>
 			<groupId>org.springframework.kafka</groupId>
 			<artifactId>spring-kafka</artifactId>
 		</dependency>
+
+		<!-- Spring Data Redis -->
+		<dependency>
+			<groupId>org.springframework.data</groupId>
+			<artifactId>spring-data-redis</artifactId>
+		</dependency>
+
+		<!-- Lettuce Core (Redis Client) -->
+		<!-- https://mvnrepository.com/artifact/io.lettuce/lettuce-core -->
+		<dependency>
+			<groupId>io.lettuce</groupId>
+			<artifactId>lettuce-core</artifactId>
+			<version>6.2.4.RELEASE</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>
@@ -77,5 +117,4 @@
 			</plugin>
 		</plugins>
 	</build>
-
 </project>
