@@ -3,10 +3,13 @@ package com.namdam1123.j2ee.postservicequerry.Controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.namdam1123.j2ee.postservicequerry.Dto.PostEvent;
 import com.namdam1123.j2ee.postservicequerry.Entities.Post;
+import com.namdam1123.j2ee.postservicequerry.Entities.PostStatistic;
 import com.namdam1123.j2ee.postservicequerry.Entities.PostStatus;
 import com.namdam1123.j2ee.postservicequerry.Events.PostCreatedEvent;
 import com.namdam1123.j2ee.postservicequerry.Events.PostEvents.RollbackPostEvent;
 import com.namdam1123.j2ee.postservicequerry.Repository.PostRepository;
+import com.namdam1123.j2ee.postservicequerry.Repository.PostStatisticRepository;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +30,9 @@ public class PostServiceQuerryController {
     PostRepository repository;
 
     @Autowired
+    PostStatisticRepository postStatisticRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @Autowired
@@ -35,6 +41,50 @@ public class PostServiceQuerryController {
     @GetMapping
     List<Post> getAllPost() {
         return repository.findAll();
+    }
+
+    @GetMapping
+    List<PostStatistic> getAllPostStatistic() {
+        return postStatisticRepository.findAll();
+    }
+
+    @KafkaListener(topics = "PostStatistic-event-topic", groupId = "PostStatistic-event-group")
+    public void processPostStatisticCreatedEvent(String payload) {
+        int attempts = 0;
+        int maxAttempts = 1; // Số lần retry tối đa
+        long delay = 2000; // Thời gian delay giữa các lần retry
+
+        while (attempts < maxAttempts) {
+            try {
+                attempts++;
+                PostStatistic event = objectMapper.readValue(payload, PostStatistic.class);
+                log.info("Received PostCreatedEvent: {}", event);
+
+                // Save the post to the database
+                PostStatistic postStatistic = new PostStatistic(
+                        event.getPostStatisticId(),
+                        event.getPostIds(),
+                        event.getAverageLike(),
+                        event.getStartTime(),
+                        event.getEndTime());
+
+                postStatisticRepository.save(postStatistic);
+                return; // Thành công, kết thúc vòng lặp
+            } catch (Exception e) {
+                log.error("Attempt {} failed: {}", attempts, e.getMessage(), e);
+                if (attempts >= maxAttempts) {
+                    // handleFailure(payload, e); // Xử lý khi vượt quá số lần retry
+                    return;
+                }
+                try {
+                    Thread.sleep(delay); // Delay giữa các lần retry
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    log.error("Retry interrupted", ie);
+                    return;
+                }
+            }
+        }
     }
 
     @KafkaListener(topics = "Post-event-topic", groupId = "post-event-group")
