@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.namdam1123.j2ee.postservicecommand.Entities.Post;
+import com.namdam1123.j2ee.postservicecommand.Entities.PostStatistic;
 import com.namdam1123.j2ee.postservicecommand.Entities.PostStatus;
 import com.namdam1123.j2ee.postservicecommand.Entities.OutboxEvent;
 import com.namdam1123.j2ee.postservicecommand.Events.PostCreatedEvent;
@@ -41,62 +42,66 @@ public class OutboxWorker {
     @Autowired
     private ObjectMapper objectMapper;
 
-    // @Scheduled(fixedRate = 5000)
-    // public void processOutbox() {
-    // List<OutboxEvent> events = outboxRepository.findAll();
+    @Scheduled(fixedRate = 5000)
+    public void processOutbox() {
+        List<OutboxEvent> events = outboxRepository.findAll();
 
-    // for (OutboxEvent event : events) {
-    // retryTemplate.execute(context -> {
-    // CompletableFuture<SendResult<String, Object>> future =
-    // kafkaTemplate.send("Post-event-topic",
-    // event.getPayload());
-    // future.whenComplete((result, ex) -> {
-    // if (ex == null) {
-    // logger.info(
-    // "Sent event=[" + event + "] with offset=[" +
-    // result.getRecordMetadata().offset() + "]");
-    // outboxRepository.delete(event);
-    // } else {
-    // logger.error("Unable to send event=[" + event + "] due to : " +
-    // ex.getMessage());
-    // // Handle DLQ logic here if needed
-    // if (context.getRetryCount() >= 3) {
-    // // Update master state or trigger rollback
-    // logger.error("All retries failed for event=[" + event + "]. Triggering
-    // rollback.");
-    // rollback(event);
-    // }
-    // }
-    // });
-    // return null;
-    // });
-    // }
-    // }
+        for (OutboxEvent event : events) {
+            retryTemplate.execute(context -> {
+                CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send("Post-event-topic",
+                        event.getPayload());
+                future.whenComplete((result, ex) -> {
+                    if (ex == null) {
+                        logger.info(
+                                "Sent event=[" + event + "] with offset=[" +
+                                        result.getRecordMetadata().offset() + "]");
+                        outboxRepository.delete(event);
+                    } else {
+                        logger.error("Unable to send event=[" + event + "] due to : " +
+                                ex.getMessage());
+                        // Handle DLQ logic here if needed
+                        if (context.getRetryCount() >= 3) {
+                            // Update master state or trigger rollback
+                            logger.error("All retries failed for event=[" + event + "]. Triggering rollback.");
+                            rollback(event);
+                        }
+                    }
+                });
+                return null;
+            });
+        }
+    }
 
     @Autowired
     private EventAggregator eventAggregator;
 
-    @Scheduled(fixedRate = 60000) // 1 minute
+    @Scheduled(fixedRate = 5000) // 5 s
     public void aggregateEvents() {
         List<OutboxEvent> events = outboxRepository.findAll();
         for (OutboxEvent event : events) {
             eventAggregator.addEvent(event);
         }
 
-        OutboxEvent eventsToProcess = eventAggregator.processAndSendAverageEvent();
+        PostStatistic eventsToProcess = eventAggregator.processAndSendAverageEvent();
         retryTemplate.execute(context -> {
-            CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send("Post-event-topic",
+            CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send("PostStatistic-event-topic",
                     eventsToProcess.getPayload());
             future.whenComplete((result, ex) -> {
                 if (ex == null) {
                     logger.info(
-                            "Sent event=[" + eventsToProcess + "] with offset=[" + result.getRecordMetadata().offset() + "]");
-                    outboxRepository.delete(eventsToProcess);
+                            "Sent event=[" + eventsToProcess + "] with offset=[" + result.getRecordMetadata().offset()
+                                    + "]");
+                    for (OutboxEvent event : events) {
+                        outboxRepository.delete(event);
+                    }
+
                 } else {
                     logger.error("Unable to send event=[" + eventsToProcess + "] due to : " + ex.getMessage());
                     if (context.getRetryCount() >= 3) {
                         logger.error("All retries failed for event=[" + eventsToProcess + "]. Triggering rollback.");
-                        rollback(eventsToProcess);
+                        for (OutboxEvent event : events) {
+                            rollback(event);
+                        }
                     }
                 }
             });
