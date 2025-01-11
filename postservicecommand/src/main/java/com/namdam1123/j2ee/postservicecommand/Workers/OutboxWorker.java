@@ -56,7 +56,7 @@ public class OutboxWorker {
                         logger.info(
                                 "Sent event=[" + event + "] with offset=[" +
                                         result.getRecordMetadata().offset() + "]");
-                        outboxRepository.delete(event);
+                        // outboxRepository.delete(event);
                     } else {
                         logger.error("Unable to send event=[" + event + "] due to : " +
                                 ex.getMessage());
@@ -78,15 +78,20 @@ public class OutboxWorker {
     @Autowired
     private PostStatisticSerializer postStatisticSerializer;
 
-    @Scheduled(fixedRate = 5000) // 5 s
+    @Scheduled(fixedRate = 10000) // 5 s
     public void aggregateEvents() {
         List<OutboxEvent> events = outboxRepository.findAll();
+        if (events.isEmpty()) {
+            return;
+        }
         for (OutboxEvent event : events) {
             eventAggregator.addEvent(event);
         }
 
         PostStatistic eventsToProcess = eventAggregator.processAndSendAverageEvent();
         String payload = postStatisticSerializer.serialize(eventsToProcess);
+
+        logger.info(payload);
 
         retryTemplate.execute(context -> {
             CompletableFuture<SendResult<String, Object>> future = kafkaTemplate.send("PostStatistic-event-topic",

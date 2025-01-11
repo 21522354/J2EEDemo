@@ -64,7 +64,7 @@ public class PostServiceQuerryController {
 
                 // Save the post to the database
                 PostStatistic postStatistic = new PostStatistic(
-                        UUID.randomUUID(),
+                        event.getPostStatisticId(),
                         event.getPostIds(),
                         event.getAverageLike(),
                         event.getStartTime(),

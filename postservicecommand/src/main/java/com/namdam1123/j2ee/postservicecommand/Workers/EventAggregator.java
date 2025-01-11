@@ -68,6 +68,7 @@ public class EventAggregator {
         if (count > 0) {
             double average = sum / count;
             PostStatistic postStatistic = new PostStatistic();
+            postStatistic.setPostStatisticId(UUID.randomUUID());
             List<UUID> postIds = new ArrayList<>();
             LocalDateTime startTime = null;
             LocalDateTime endTime = null;
